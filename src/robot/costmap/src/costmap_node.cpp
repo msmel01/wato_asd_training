@@ -8,8 +8,8 @@ using std::placeholders::_1;
  
 
 CostmapNode::CostmapNode() : Node("costmap"), costmap_(robot::CostmapCore(this->get_logger())) {
-  occup_grid_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("costmap", 10);
-  scan_subs_ = this->create_subscription<sensor_msgs::msg::LaserScan>("lidar", 10, std::bind(&CostmapNode::subscribeMessage, this, _1));
+  occup_grid_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>("/costmap", 10);
+  scan_subs_ = this->create_subscription<sensor_msgs::msg::LaserScan>("/lidar", 10, std::bind(&CostmapNode::subscribeMessage, this, _1));
 }
 
 
@@ -17,7 +17,8 @@ void CostmapNode::publishGrid() {
   nav_msgs::msg::OccupancyGrid grid_msg;
 
   grid_msg.header.stamp = now();
-  grid_msg.header.frame_id = "map";
+  // grid_msg.header.frame_id = "base_link"; // frame is robot-centered
+  grid_msg.header.frame_id = "robot/chassis/lidar"; // frame is robot-centered
 
   grid_msg.info.resolution = costmap_.getResolution();
   grid_msg.info.width = costmap_.getWidth(); // width of grid array
@@ -45,16 +46,21 @@ void CostmapNode::publishGrid() {
 
 
 void CostmapNode::subscribeMessage(sensor_msgs::msg::LaserScan::SharedPtr scan) {
+  // RCLCPP_INFO(this->get_logger(), "Started subscribeMessage");
   costmap_.initializeGrid();
-
+  // RCLCPP_INFO(this->get_logger(), "Finished initializeGrid");
   for (size_t i = 0; i < scan->ranges.size(); ++i) {
     double angle = scan->angle_min + i * scan->angle_increment;
     double range = scan->ranges[i];
     if (range < scan->range_max && range > scan->range_min) {
         // Calculate grid coordinates
         int x_grid, y_grid;
+        // RCLCPP_INFO(this->get_logger(), "Started convertToGrid");
         costmap_.convertToGrid(range, angle, x_grid, y_grid);
+        // RCLCPP_INFO(this->get_logger(), "Finished convertToGrid");
+        // RCLCPP_INFO(this->get_logger(), "Started markObstacle");
         costmap_.markObstacle(x_grid, y_grid);
+        // RCLCPP_INFO(this->get_logger(), "Ended markObstacle");
     }
 }
 
@@ -62,7 +68,7 @@ void CostmapNode::subscribeMessage(sensor_msgs::msg::LaserScan::SharedPtr scan) 
 
   this->publishGrid();
 
-  // RCLCPP_INFO(this->get_logger(), "%f", scan->angle_min);
+  // RCLCPP_INFO(this->get_logger(), "Finished subscribeMessage");
 }
 
 
