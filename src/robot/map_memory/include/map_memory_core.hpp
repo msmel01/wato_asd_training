@@ -12,6 +12,7 @@ class MapMemoryCore {
 
   private:
     rclcpp::Logger logger_;
+    
 };
 
 }  
