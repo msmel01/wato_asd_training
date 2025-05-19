@@ -79,7 +79,7 @@ bool PlannerNode::isObstacle(int x, int y) {
   // int x_costmap_arr_idx = static_cast<int>((x - current_global_costmap_.info.origin.position.x) / current_global_costmap_.info.resolution);
   // int y_costmap_arr_idx = static_cast<int>((y- current_global_costmap_.info.origin.position.y) / current_global_costmap_.info.resolution);
   int costmap_arr_idx = y*current_global_costmap_.info.width + x;
-  return current_global_costmap_.data[costmap_arr_idx] > 0; // obstacle score > 0 means there is obstacle
+  return current_global_costmap_.data[costmap_arr_idx] == 100; // obstacle score > 0 means there is obstacle
 }
 
 
@@ -156,9 +156,11 @@ std::unordered_map<CellIndex, AStarNode, CellIndexHash> PlannerNode::AStarAlgori
         if (isObstacle(n_x, n_y)) {
           continue;
         }
+        int costmap_arr_idx = n_y*current_global_costmap_.info.width + n_x;
+        int cost = current_global_costmap_.data[costmap_arr_idx];
 
         // Populate h_score, g_score, and f_score for neighbor node
-        neighbor_node.h_score = calculateHeuristic(n_x, n_y, x_goal_grid, y_goal_grid);
+        neighbor_node.h_score = calculateHeuristic(n_x, n_y, x_goal_grid, y_goal_grid) + cost;
         neighbor_node.g_score = curr_node.g_score + 1; // assuming it costs 1 to step in any direction
         neighbor_node.f_score = neighbor_node.g_score + neighbor_node.h_score;
 
