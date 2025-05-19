@@ -87,6 +87,10 @@ void CostmapCore::inflateObstacles() {
 
                 for (int dy = -inflation_radius_cells_; dy <= inflation_radius_cells_; ++dy) {
                     for (int dx = -inflation_radius_cells_; dx <= inflation_radius_cells_; ++dx) {
+                        if (dy == 0 && dx == 0) {
+                            continue;
+                        }
+
                         int x_neighbor = x + dx; // index of neighbor in costmap array
                         int y_neighbor = y + dy;
                         
