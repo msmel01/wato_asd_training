@@ -35,13 +35,15 @@ class MapMemoryNode : public rclcpp::Node {
     // NEW CODE
     double curr_x = 0.0;
     double curr_y = 0.0;
-    double last_yaw = 0.0;  // in radians
+    double curr_yaw = 0.0;
 
     // Used to make sure we are updating every 1.5 m travelled
     double last_x = 0.0;
     double last_y = 0.0;
+    double last_yaw = 0.0;  // in radians
 
     const double distance_threshold = 1.5;
+    const double yaw_threshold = 0.2;
 
     // Flags
     bool costmap_updated_ = false;

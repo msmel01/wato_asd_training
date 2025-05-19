@@ -63,21 +63,32 @@ void MapMemoryNode::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
   double roll, pitch, yaw;
   tf2::Matrix3x3(q).getRPY(roll, pitch, yaw);
 
-  last_yaw = yaw;
+  curr_yaw = yaw;
 
   // Compute distance traveled
   double distance = std::sqrt(std::pow(x - last_x, 2) + std::pow(y - last_y, 2));
+  double delta_yaw = std::abs(last_yaw - curr_yaw);
+  // RCLCPP_INFO(this->get_logger(), "last_x, last_y, last_yaw are %f, %f, %f and distance travelled is %f", last_x, last_y, last_yaw, distance);
+  // RCLCPP_INFO(this->get_logger(), "x, y, yaw are %f, %f, %f and delta_yaw is %f", x, y, yaw, delta_yaw);
+  // RCLCPP_INFO(this->get_logger(), "-------");
+
   if (distance >= distance_threshold) {
-      last_x = x;
-      last_y = y;
+    last_x = x;
+    last_y = y;
+    last_yaw = yaw;
+    if (delta_yaw <= yaw_threshold) {
       should_update_map_ = true;
-      // RCLCPP_INFO(this->get_logger(), "Distance threshold travelled, must update map now");
+    }
   }
+  // if (delta_yaw >= yaw_threshold) {
+  //   last_yaw = curr_yaw;
+  //   should_update_map_ = true;
+  // }
 }
 
 
 // Timer-based map update
-void MapMemoryNode::updateMap() {
+void MapMemoryNode::updateMap() {  
   if (should_update_map_ && costmap_updated_) {
       // RCLCPP_INFO(this->get_logger(), "Calling integrateCostmap");
       integrateCostmap();
@@ -116,45 +127,74 @@ void MapMemoryNode::integrateCostmap() {
   const float origin_x_local = latest_costmap_.info.origin.position.x;
   const float origin_y_local = latest_costmap_.info.origin.position.y;
 
-  float cos_yaw = std::cos(last_yaw);
-  float sin_yaw = std::sin(last_yaw);
+  // float cos_yaw = std::cos(last_yaw);
+  // float sin_yaw = std::sin(last_yaw);
 
 
   for (size_t y_idx = 0; y_idx < latest_costmap_.info.height; ++y_idx) {
     for (size_t x_idx = 0; x_idx < latest_costmap_.info.width; ++x_idx) {
       // Cartesian coordinate in local frame
-      float x_local_cell = origin_x_local + x_idx*res; // maybe add 0.5f to get center of cell cartesian coordinate
-      float y_local_cell = origin_y_local + y_idx*res;
+      // float x_local_cell = origin_x_local + x_idx*res; // maybe add 0.5f to get center of cell cartesian coordinate
+      // float y_local_cell = origin_y_local + y_idx*res;
 
-      // Cartesian coordinate in global frame using robot position and orientation
-      float x_global_cell = last_x + (cos_yaw * x_local_cell - sin_yaw * y_local_cell);
-      float y_global_cell = last_y + (sin_yaw * x_local_cell + cos_yaw * y_local_cell);
+      // // Cartesian coordinate in global frame using robot position and orientation
+      // float x_global_cell = curr_x + (cos_yaw * x_local_cell - sin_yaw * y_local_cell);
+      // float y_global_cell = curr_y + (sin_yaw * x_local_cell + cos_yaw * y_local_cell);
+      // float x_global_cell = (curr_x + origin_x_local) + (cos_yaw * x_local_cell - sin_yaw * y_local_cell);
+      // float y_global_cell = (curr_y + origin_y_local) + (sin_yaw * x_local_cell + cos_yaw * y_local_cell) ;
 
-      // Check that cell is not out of bounds of global map
-      // if (x_global_cell < 0 || y_global_cell < 0 || x_global_cell >= static_cast<int>(global_map_.info.width) || y_global_m >= static_cast<int>(global_map_.info.height)) {
+      // 1. Position in robot frame
+      double x_robot = origin_x_local + x_idx * res;
+      double y_robot = origin_y_local + y_idx * res;
+
+      // 2. Rotate to global frame
+      double x_rot = x_robot * cos(curr_yaw) - y_robot * sin(curr_yaw);
+      double y_rot = x_robot * sin(curr_yaw) + y_robot * cos(curr_yaw);
+
+      // 3. Translate to global frame
+      double x_global = curr_x + x_rot;
+      double y_global = curr_y + y_rot;
+
+      // // Check that cell is not out of bounds of global map
+      // if (x_global_cell < 0 || y_global_cell < 0 || x_global_cell >= global_width_m || y_global_cell >= global_height_m) {
       //   continue; // Skip if out of bounds
       // }
 
       // Corresponding global_map_ indices for cell's global coordinate
-      int x_global_cell_idx = static_cast<int>((x_global_cell - global_map_.info.origin.position.x) / global_map_.info.resolution);
-      int y_global_cell_idx = static_cast<int>((y_global_cell - global_map_.info.origin.position.y) / global_map_.info.resolution);
+      // 4. Convert to global map index
+      int x_index = std::round((x_global - global_map_.info.origin.position.x) / res);
+      int y_index = std::round((y_global - global_map_.info.origin.position.x) / res);
 
-      
-      // Check that indices are not out of bounds
-      if (x_global_cell_idx < 0 || y_global_cell_idx < 0 || x_global_cell_idx >= static_cast<int>(global_map_.info.width) || y_global_cell_idx >= static_cast<int>(global_map_.info.height)) {
-        continue; // Skip if out of bounds
+      // static_cast<int>(std::round((global_x - global_origin_x) / global_resolution));
+
+      if (x_idx == 0 && y_idx == 0) {
+        RCLCPP_INFO(this->get_logger(), "Robot cartesian coordinate is %f, %f  yaw %f", curr_x, curr_y, curr_yaw);
+        RCLCPP_INFO(this->get_logger(), "[0, 0] cartesian coordinate in robot frame is %f, %f", x_robot, y_robot);
+        RCLCPP_INFO(this->get_logger(), "[0, 0] cartesian coordinate in global frame is %f, %f", x_global, y_global);
       }
 
+      if (x_index < 0 || x_index >= global_map_.info.width || y_index < 0 || y_index >= global_map_.info.height) {
+        continue;
+      }
+      // int x_global_cell_idx = static_cast<int>((x_global_cell - global_map_.info.origin.position.x) / global_map_.info.resolution);
+      // int y_global_cell_idx = static_cast<int>((y_global_cell - global_map_.info.origin.position.y) / global_map_.info.resolution);
+      // // Check that indices are not out of bounds
+      // if (x_global_cell_idx < 0 || y_global_cell_idx < 0 || x_global_cell_idx >= static_cast<int>(global_map_.info.width) || y_global_cell_idx >= static_cast<int>(global_map_.info.height)) {
+      //   continue; // Skip if out of bounds
+      // }
+
       // Convert to 1D global_map_ index
-      int global_idx = y_global_cell_idx * global_map_.info.width + x_global_cell_idx;
-      int8_t& global_val = global_map_.data[global_idx];
+      // int global_idx = y_global_cell_idx * global_map_.info.width + x_global_cell_idx;
+      // int8_t& global_val = global_map_.data[global_idx];
+      int8_t& global_val = global_map_.data[y_index * global_map_.info.width + x_index];
 
       int local_idx = y_idx * latest_costmap_.info.width + x_idx;
       int8_t value = latest_costmap_.data[local_idx];
       
       // If a cell in the new costmap has a known value, overwrite its value into the global map
       if (global_val == -1 || value > global_val) {
-        global_val = value;
+        global_map_.data[y_index * global_map_.info.width + x_index] = value;
+        // global_val = value;
         // RCLCPP_INFO(this->get_logger(), "value in global map updated");
       }
     }
