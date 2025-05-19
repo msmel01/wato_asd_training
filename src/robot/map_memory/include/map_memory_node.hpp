@@ -43,7 +43,7 @@ class MapMemoryNode : public rclcpp::Node {
     double last_yaw = 0.0;  // in radians
 
     const double distance_threshold = 1.5;
-    const double yaw_threshold = 0.2;
+    const double yaw_threshold = 0.1;
 
     // Flags
     bool costmap_updated_ = false;

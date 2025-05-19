@@ -32,7 +32,7 @@ MapMemoryNode::MapMemoryNode() : Node("map_memory"), map_memory_(robot::MapMemor
 
   global_map_.data.resize(global_width_cells * global_height_cells, -1); // all unknown
 
-  // should_update_map_ = true;
+  should_update_map_ = true;
 }
 
 
