@@ -19,7 +19,7 @@ class CostmapNode : public rclcpp::Node {
 
   private:
     robot::CostmapCore costmap_;
-
+    
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr occup_grid_pub_;
 
     // Subscribe to read

@@ -44,7 +44,8 @@ class CostmapCore {
     // Define dimensions of costmap and initialize array
     static constexpr int width_costmap_arr_ = 305; // 30.5 / 0.1
     static constexpr int height_costmap_arr_ = 305;
-    std::vector<std::vector<int>> costmap;
+    // std::vector<std::vector<int>> costmap;
+    std::vector<int> costmap;
 
     // Value set to cells with an obstacle
     static constexpr int obstacle_cost_ = 100;

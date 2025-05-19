@@ -10,7 +10,9 @@ CostmapCore::CostmapCore(const rclcpp::Logger& logger) : logger_(logger) {}
 
 void CostmapCore::initializeGrid() {
     // RCLCPP_INFO(logger_, "Initializing costmap with width: %d and height: %d", width_costmap_arr_, height_costmap_arr_);
-    costmap = std::vector<std::vector<int>>(height_costmap_arr_, std::vector<int>(width_costmap_arr_, 0));
+    // costmap = std::vector<std::vector<int>>(height_costmap_arr_, std::vector<int>(width_costmap_arr_, 0));
+    // Store as 1D array
+    costmap = std::vector<int>(height_costmap_arr_ * width_costmap_arr_, 0);
 }
 
 
@@ -40,7 +42,9 @@ float CostmapCore::getHeightWorld() {
 
 
 int CostmapCore::getCost(size_t x, size_t y) {
-    return this->costmap[y][x];
+    // return this->costmap[y][x];
+    // REFACTORED FOR 1D costmap
+    return this->costmap[y*width_costmap_arr_ + x];
 }
 
 void CostmapCore::convertToGrid(float range, float angle, int& x_grid, int& y_grid) {
@@ -49,16 +53,22 @@ void CostmapCore::convertToGrid(float range, float angle, int& x_grid, int& y_gr
     float origin_x = - width_world_ / 2.0f;
     float origin_y = - height_world_ / 2.0f;
 
-    x_grid = static_cast<int>((x - origin_x) / resolution_);
-    y_grid = static_cast<int>((y - origin_y) / resolution_);
+    x_grid = static_cast<int>(std::round((x - origin_x) / resolution_));
+    y_grid = static_cast<int>(std::round((y - origin_y) / resolution_));
 }
 
 
 void CostmapCore::markObstacle(int x_grid, int y_grid) {
     // this->costmap[y_grid][x_grid] = this->obstacle_cost_;
 
+    // if (x_grid >= 0 && x_grid < width_costmap_arr_ && y_grid >= 0 && y_grid < height_costmap_arr_) {
+    //     costmap[static_cast<int>(y_grid)][static_cast<int>(x_grid)] = obstacle_cost_;
+    // } else {
+    //     // RCLCPP_WARN(logger_, "markObstacle out of bounds: (%d, %d)", x_grid, y_grid);
+    // }
+    // REFACTORED FOR 1D costmap
     if (x_grid >= 0 && x_grid < width_costmap_arr_ && y_grid >= 0 && y_grid < height_costmap_arr_) {
-        costmap[static_cast<int>(y_grid)][static_cast<int>(x_grid)] = obstacle_cost_;
+        costmap[y_grid * width_costmap_arr_ + x_grid] = obstacle_cost_;
     } else {
         // RCLCPP_WARN(logger_, "markObstacle out of bounds: (%d, %d)", x_grid, y_grid);
     }
@@ -69,7 +79,10 @@ void CostmapCore::markObstacle(int x_grid, int y_grid) {
 void CostmapCore::inflateObstacles() {
     for (int y = 0; y < height_costmap_arr_; ++y) {
         for (int x = 0; x < width_costmap_arr_; ++x) {
-            if (costmap[y][x] == obstacle_cost_) {
+            // if (costmap[y][x] == obstacle_cost_) {
+
+            // REFACTORED FOR 1D costmap
+            if (costmap[y * width_costmap_arr_ + x] == obstacle_cost_) {
                 // This is an obstacle cell
 
                 for (int dy = -inflation_radius_cells_; dy <= inflation_radius_cells_; ++dy) {
@@ -91,12 +104,13 @@ void CostmapCore::inflateObstacles() {
 
                         int inflated_cost = static_cast<int>(max_inflation_cost_ * (1.0f - euclidean / inflation_radius_));
 
-                        // // NEW
-                        // size_t x_i = static_cast<size_t>(x_neighbor);
-                        // size_t y_i = static_cast<size_t>(y_neighbor);
-
-                        if (inflated_cost > costmap[y_neighbor][x_neighbor]) {
-                            costmap[y_neighbor][x_neighbor] = inflated_cost;
+                        // if (inflated_cost > costmap[y_neighbor][x_neighbor]) {
+                        //     costmap[y_neighbor][x_neighbor] = inflated_cost;
+                        // }
+                        // 
+                        // REFACTORED FOR 1D costmap
+                        if (inflated_cost > costmap[y_neighbor * width_costmap_arr_ + x_neighbor]) {
+                            costmap[y_neighbor * width_costmap_arr_ + x_neighbor] = inflated_cost;
                         }
                     }
                 }

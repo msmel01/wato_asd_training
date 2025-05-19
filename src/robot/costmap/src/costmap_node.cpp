@@ -18,6 +18,7 @@ void CostmapNode::publishGrid() {
 
   grid_msg.header.stamp = now();
   // grid_msg.header.frame_id = "base_link"; // frame is robot-centered
+  // grid_msg.header.frame_id = "robot/chassis/lidar"; // frame is robot-centered
   grid_msg.header.frame_id = "robot/chassis/lidar"; // frame is robot-centered
 
   grid_msg.info.resolution = costmap_.getResolution();
@@ -46,7 +47,8 @@ void CostmapNode::publishGrid() {
 
 
 void CostmapNode::subscribeMessage(sensor_msgs::msg::LaserScan::SharedPtr scan) {
-  // RCLCPP_INFO(this->get_logger(), "Started subscribeMessage");
+  // RCLCPP_INFO(this->get_logger(), "LaserScan frame_id: %s", scan->header.frame_id.c_str());
+
   costmap_.initializeGrid();
   // RCLCPP_INFO(this->get_logger(), "Finished initializeGrid");
   for (size_t i = 0; i < scan->ranges.size(); ++i) {
@@ -67,7 +69,8 @@ void CostmapNode::subscribeMessage(sensor_msgs::msg::LaserScan::SharedPtr scan) 
   costmap_.inflateObstacles();
 
   this->publishGrid();
-
+  // RCLCPP_INFO(this->get_logger(), "New local costmap published");
+  
   // RCLCPP_INFO(this->get_logger(), "Finished subscribeMessage");
 }
 
