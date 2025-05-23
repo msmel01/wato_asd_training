@@ -35,7 +35,7 @@ void PlannerNode::newGoalCallback(const geometry_msgs::msg::PointStamped::Shared
   goal_point_ = *msg;
   goal_received_ = true;
   state_ = State::WAITING_FOR_ROBOT_TO_REACH_GOAL;
-  RCLCPP_INFO(this->get_logger(), "Goal point at %f, %f", msg->point.x, msg->point.y);
+  // RCLCPP_INFO(this->get_logger(), "Goal point at %f, %f", msg->point.x, msg->point.y);
   planPath();
 }
 
@@ -153,14 +153,14 @@ std::unordered_map<CellIndex, AStarNode, CellIndexHash> PlannerNode::AStarAlgori
         } 
 
         // Check to see if n_x, n_y contains an obstacle based on current_global_costmap_
-        if (isObstacle(n_x, n_y)) {
+        if (isObstacle(n_x, n_y)) { // need to also check
           continue;
         }
         int costmap_arr_idx = n_y*current_global_costmap_.info.width + n_x;
         int cost = current_global_costmap_.data[costmap_arr_idx];
 
         // Populate h_score, g_score, and f_score for neighbor node
-        neighbor_node.h_score = calculateHeuristic(n_x, n_y, x_goal_grid, y_goal_grid) + cost;
+        neighbor_node.h_score = calculateHeuristic(n_x, n_y, x_goal_grid, y_goal_grid) + 100*cost;
         neighbor_node.g_score = curr_node.g_score + 1; // assuming it costs 1 to step in any direction
         neighbor_node.f_score = neighbor_node.g_score + neighbor_node.h_score;
 
@@ -250,7 +250,7 @@ void PlannerNode::planPath() {
     pose.pose.position.z = 0.0;
     pose.pose.orientation.w = 1.0;
 
-    RCLCPP_INFO(this->get_logger(), "Path point at %f, %f", pose.pose.position.x, pose.pose.position.y);
+    // RCLCPP_INFO(this->get_logger(), "Path point at %f, %f", pose.pose.position.x, pose.pose.position.y);
 
     reverse_path.push_back(pose);
     current_cell_index = curr_node_it->second.parent_index; // backtrack to parent node

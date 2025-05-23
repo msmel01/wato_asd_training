@@ -71,8 +71,8 @@ std::optional<geometry_msgs::msg::PoseStamped> PurePursuitController::findLookah
 geometry_msgs::msg::Twist PurePursuitController::computeVelocity(const geometry_msgs::msg::PoseStamped &target) {
   geometry_msgs::msg::Twist cmd_vel;
 
-  RCLCPP_INFO(this->get_logger(), "Current robot point at %f, %f", robot_odom_->pose.pose.position.x, robot_odom_->pose.pose.position.y);
-  RCLCPP_INFO(this->get_logger(), "Lookahead point at %f, %f", target.pose.position.x, target.pose.position.y);
+  // RCLCPP_INFO(this->get_logger(), "Current robot point at %f, %f", robot_odom_->pose.pose.position.x, robot_odom_->pose.pose.position.y);
+  // RCLCPP_INFO(this->get_logger(), "Lookahead point at %f, %f", target.pose.position.x, target.pose.position.y);
 
   const auto &goal = current_path_->poses.back().pose.position;
   const auto &robot_pos = robot_odom_->pose.pose.position;
