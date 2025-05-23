@@ -43,11 +43,12 @@ class MapMemoryNode : public rclcpp::Node {
     double last_yaw = 0.0;  // in radians
 
     const double distance_threshold = 1.5;
-    const double yaw_threshold = 0.1;
+    const double yaw_threshold = 0.05;
 
     // Flags
     bool costmap_updated_ = false;
-    bool should_update_map_ = false;
+    bool should_update_map_ = true;
+    bool should_update_start_map_ = true;
 
     // Callback when new costmap is received
     void costmapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);

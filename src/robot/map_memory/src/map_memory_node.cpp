@@ -32,14 +32,45 @@ MapMemoryNode::MapMemoryNode() : Node("map_memory"), map_memory_(robot::MapMemor
 
   global_map_.data.resize(global_width_cells * global_height_cells, -1); // all unknown
 
-  should_update_map_ = true;
+  // should_update_map_ = true;
 }
 
 
 void MapMemoryNode::costmapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   // Store the latest costmap
+  // RCLCPP_INFO(this->get_logger(), "Costmap received");
   latest_costmap_ = *msg;
-  costmap_updated_ = true;
+  // costmap_updated_ = true;
+
+  // RCLCPP_INFO(this->get_logger(), "latest_costmap_ info: width=%d, height=%d, resolution=%f", latest_costmap_.info.width, latest_costmap_.info.height, latest_costmap_.info.resolution);
+  // bool has_non_zero_in_callback = false;
+  // for (size_t i = 0; i < latest_costmap_.data.size(); ++i) {
+  //     if (latest_costmap_.data[i] != 0 && latest_costmap_.data[i] != -1) { // Check for occupied or unknown cells
+  //         has_non_zero_in_callback = true;
+  //         break;
+  //     }
+  // }
+  // RCLCPP_INFO(this->get_logger(), "latest_costmap_.data has non-zero values in callback: %d", has_non_zero_in_callback);
+
+  bool has_meaningful_data = false;
+  // Iterate through a small sample or the whole data to check for known values (not -1 or 0)
+  // Or, if 0 means 'free' space you expect, check for 1-100 (occupied)
+  // Assuming 0 is free, -1 is unknown, 1-100 is occupied.
+  for (size_t i = 0; i < latest_costmap_.data.size(); ++i) {
+      if (latest_costmap_.data[i] > 0) { // Check for occupied cells
+          has_meaningful_data = true;
+          break;
+      }
+  }
+
+  if (has_meaningful_data) {
+      costmap_updated_ = true;
+      // RCLCPP_INFO(this->get_logger(), "costmap_updated_ set to true (meaningful data detected).");
+  } else {
+      costmap_updated_ = false; // Or just don't set it if it was already false
+      // RCLCPP_INFO(this->get_logger(), "Costmap received, but no meaningful (occupied) data yet.");
+  }
+
 }
 
 
@@ -76,9 +107,10 @@ void MapMemoryNode::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
     last_x = x;
     last_y = y;
     last_yaw = yaw;
-    if (delta_yaw <= yaw_threshold) {
-      should_update_map_ = true;
-    }
+    // if (delta_yaw <= yaw_threshold) {
+    //   should_update_map_ = true;
+    // }
+    should_update_map_ = true;
   }
   // if (delta_yaw >= yaw_threshold) {
   //   last_yaw = curr_yaw;
@@ -89,8 +121,7 @@ void MapMemoryNode::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
 
 // Timer-based map update
 void MapMemoryNode::updateMap() {  
-  if (should_update_map_ && costmap_updated_) {
-      // RCLCPP_INFO(this->get_logger(), "Calling integrateCostmap");
+  if ((should_update_map_ && costmap_updated_)) {
       integrateCostmap();
 
       global_map_.header.stamp = now();
@@ -117,6 +148,7 @@ void MapMemoryNode::updateMap() {
       map_pub_->publish(global_map_);
 
       should_update_map_ = false;
+
   }
 }
 
@@ -131,8 +163,24 @@ void MapMemoryNode::integrateCostmap() {
   // float sin_yaw = std::sin(last_yaw);
 
 
-  for (size_t y_idx = 0; y_idx < latest_costmap_.info.height; ++y_idx) {
-    for (size_t x_idx = 0; x_idx < latest_costmap_.info.width; ++x_idx) {
+  RCLCPP_INFO(this->get_logger(), "Entering integrateCostmap.");
+  // bool has_non_zero_in_integrate = false;
+  // for (int y_idx = 0; y_idx < latest_costmap_.info.height; ++y_idx) {
+  //     for (int x_idx = 0; x_idx < latest_costmap_.info.width; ++x_idx) {
+  //         int local_idx = y_idx * latest_costmap_.info.width + x_idx;
+  //         if (latest_costmap_.data[local_idx] != 0 && latest_costmap_.data[local_idx] != -1) {
+  //             has_non_zero_in_integrate = true;
+  //             // If you want to see specific non-zero values, uncomment this:
+  //             // RCLCPP_INFO(this->get_logger(), "Non-zero value found in latest_costmap_.data[%d][%d]: %d", x_idx, y_idx, latest_costmap_.data[local_idx]);
+  //             break;
+  //         }
+  //     }
+  //     if (has_non_zero_in_integrate) break;
+  // }
+  // RCLCPP_INFO(this->get_logger(), "latest_costmap_.data has non-zero values in integrateCostmap: %d", has_non_zero_in_integrate);
+
+  for (int y_idx = 0; y_idx < latest_costmap_.info.height; ++y_idx) {
+    for (int x_idx = 0; x_idx < latest_costmap_.info.width; ++x_idx) {
       // Cartesian coordinate in local frame
       // float x_local_cell = origin_x_local + x_idx*res; // maybe add 0.5f to get center of cell cartesian coordinate
       // float y_local_cell = origin_y_local + y_idx*res;
@@ -163,17 +211,30 @@ void MapMemoryNode::integrateCostmap() {
       // Corresponding global_map_ indices for cell's global coordinate
       // 4. Convert to global map index
       int x_index = std::round((x_global - global_map_.info.origin.position.x) / res);
-      int y_index = std::round((y_global - global_map_.info.origin.position.x) / res);
+      int y_index = std::round((y_global - global_map_.info.origin.position.y) / res);
 
       // static_cast<int>(std::round((global_x - global_origin_x) / global_resolution));
 
-      if (x_idx == 0 && y_idx == 0) {
-        RCLCPP_INFO(this->get_logger(), "Robot cartesian coordinate is %f, %f  yaw %f", curr_x, curr_y, curr_yaw);
-        RCLCPP_INFO(this->get_logger(), "[0, 0] cartesian coordinate in robot frame is %f, %f", x_robot, y_robot);
-        RCLCPP_INFO(this->get_logger(), "[0, 0] cartesian coordinate in global frame is %f, %f", x_global, y_global);
-      }
+      // if (x_idx == 0 && y_idx == 0) {
+      //   RCLCPP_INFO(this->get_logger(), "Robot cartesian coordinate is %f, %f  yaw %f", curr_x, curr_y, curr_yaw);
+      //   RCLCPP_INFO(this->get_logger(), "[0, 0] cartesian coordinate in robot frame is %f, %f", x_robot, y_robot);
+      //   RCLCPP_INFO(this->get_logger(), "[0, 0] cartesian coordinate in global frame is %f, %f", x_global, y_global);
+      // }
+      
+      int local_idx = y_idx * latest_costmap_.info.width + x_idx;
+      int8_t value = latest_costmap_.data[local_idx];
+      
+      // if (value > 0) {
+      //   RCLCPP_INFO(this->get_logger(), "Non-zero value at local index %d, %d", x_idx, y_idx);
+      // }
+      // if (local_idx == 48) {
+      //   RCLCPP_INFO(this->get_logger(), "Value at index 48 %d", value);
+      // }
 
       if (x_index < 0 || x_index >= global_map_.info.width || y_index < 0 || y_index >= global_map_.info.height) {
+        if (value > 0) {
+          RCLCPP_INFO(this->get_logger(), "Skipped non-zero value at local index %d, %d", x_idx, y_idx);
+        }
         continue;
       }
       // int x_global_cell_idx = static_cast<int>((x_global_cell - global_map_.info.origin.position.x) / global_map_.info.resolution);
@@ -186,16 +247,14 @@ void MapMemoryNode::integrateCostmap() {
       // Convert to 1D global_map_ index
       // int global_idx = y_global_cell_idx * global_map_.info.width + x_global_cell_idx;
       // int8_t& global_val = global_map_.data[global_idx];
-      int8_t& global_val = global_map_.data[y_index * global_map_.info.width + x_index];
+      int8_t global_val = global_map_.data[y_index * global_map_.info.width + x_index];
 
-      int local_idx = y_idx * latest_costmap_.info.width + x_idx;
-      int8_t value = latest_costmap_.data[local_idx];
+      
       
       // If a cell in the new costmap has a known value, overwrite its value into the global map
-      if (global_val == -1 || value > global_val) {
+      if (value > global_val) {
         global_map_.data[y_index * global_map_.info.width + x_index] = value;
         // global_val = value;
-        // RCLCPP_INFO(this->get_logger(), "value in global map updated");
       }
     }
   }
