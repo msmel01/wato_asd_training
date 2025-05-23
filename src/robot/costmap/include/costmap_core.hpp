@@ -51,7 +51,7 @@ class CostmapCore {
     static constexpr int obstacle_cost_ = 100;
 
     // Inflation radius and costs
-    static constexpr float inflation_radius_ = 1.0f;
+    static constexpr float inflation_radius_ = 1.2f;
     static constexpr int inflation_radius_cells_ = static_cast<int>(inflation_radius_ / resolution_);
     static constexpr int max_inflation_cost_ = 100; // make the cost must higher to give higher weight to obstacles
 };

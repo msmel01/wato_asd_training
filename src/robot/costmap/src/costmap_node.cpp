@@ -17,9 +17,7 @@ void CostmapNode::publishGrid() {
   nav_msgs::msg::OccupancyGrid grid_msg;
 
   grid_msg.header.stamp = now();
-  // grid_msg.header.frame_id = "base_link"; // frame is robot-centered
-  // grid_msg.header.frame_id = "robot/chassis/lidar"; // frame is robot-centered
-  grid_msg.header.frame_id = "robot/chassis/lidar"; // frame is robot-centered
+  grid_msg.header.frame_id = "base_link"; // frame is robot-centered
 
   grid_msg.info.resolution = costmap_.getResolution();
   grid_msg.info.width = costmap_.getWidth(); // width of grid array
