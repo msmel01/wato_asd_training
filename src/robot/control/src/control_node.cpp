@@ -6,8 +6,8 @@
 PurePursuitController::PurePursuitController() : Node("pure_pursuit_controller") {
   // Initialize parameters
   lookahead_distance_ = 1.0;  // Lookahead distance
-  goal_tolerance_ = 0.1;     // Distance to consider the goal reached
-  linear_speed_ = 0.5;       // Constant forward speed
+  goal_tolerance_ = 0.2;     // Distance to consider the goal reached
+  linear_speed_ = 1;       // Constant forward speed
 
   // Subscribers and Publishers
   path_sub_ = this->create_subscription<nav_msgs::msg::Path>(
