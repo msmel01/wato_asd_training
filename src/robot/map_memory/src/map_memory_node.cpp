@@ -106,12 +106,12 @@ void MapMemoryNode::odomCallback(const nav_msgs::msg::Odometry::SharedPtr msg) {
   if (distance >= distance_threshold) {
     last_x = x;
     last_y = y;
-    last_yaw = yaw;
-    // if (delta_yaw <= yaw_threshold) {
-    //   should_update_map_ = true;
-    // }
-    should_update_map_ = true;
+    if (delta_yaw <= yaw_threshold) {
+      should_update_map_ = true;
+    }
+    // should_update_map_ = true;
   }
+  last_yaw = yaw;
   // if (delta_yaw >= yaw_threshold) {
   //   last_yaw = curr_yaw;
   //   should_update_map_ = true;
@@ -232,9 +232,6 @@ void MapMemoryNode::integrateCostmap() {
       // }
 
       if (x_index < 0 || x_index >= global_map_.info.width || y_index < 0 || y_index >= global_map_.info.height) {
-        if (value > 0) {
-          RCLCPP_INFO(this->get_logger(), "Skipped non-zero value at local index %d, %d", x_idx, y_idx);
-        }
         continue;
       }
       // int x_global_cell_idx = static_cast<int>((x_global_cell - global_map_.info.origin.position.x) / global_map_.info.resolution);

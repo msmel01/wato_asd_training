@@ -47,8 +47,7 @@ class MapMemoryNode : public rclcpp::Node {
 
     // Flags
     bool costmap_updated_ = false;
-    bool should_update_map_ = true;
-    bool should_update_start_map_ = true;
+    bool should_update_map_ = false;
 
     // Callback when new costmap is received
     void costmapCallback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
